@@ -1,1 +1,1 @@
-# WritingAnInterpreterInGo
+# Writing an Interpreter in Go
