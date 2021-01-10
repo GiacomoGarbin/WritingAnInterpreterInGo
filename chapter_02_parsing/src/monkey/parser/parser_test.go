@@ -63,6 +63,10 @@ func TestLetStatement(t *testing.T) {
 	program := p.ParseProgram()
 	CheckParseErrors(t, p)
 
+	for i, stmt := range program.Statements {
+		t.Errorf("program.Statements[%d] = %T (%s, %s)", i, stmt, stmt.TokenLiteral(), stmt.String())
+	}
+
 	if program == nil {
 		t.Fatalf("ParseProgram() returned nil")
 	}
@@ -117,5 +121,39 @@ func TestReturnStatement(t *testing.T) {
 		if rs.TokenLiteral() != "return" {
 			t.Errorf("rs.TokenLiteral() not 'return', got=%q", rs.TokenLiteral())
 		}
+	}
+}
+
+func TestIdentifierExpression(t *testing.T) {
+	input := "foobar;"
+
+	l := lexer.NewLexer(input)
+	p := NewParser(l)
+
+	program := p.ParseProgram()
+	CheckParseErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements does not contain 1 statement, got=%d", len(program.Statements))
+	}
+
+	stmt, okay := program.Statements[0].(*ast.ExpressionStatement)
+
+	if !okay {
+		t.Fatalf("program.Statements[0] is not ast.ExpressionStatement, got=%T", program.Statements[0])
+	}
+
+	ident, okay := stmt.Expression.(*ast.Identifier)
+
+	if !okay {
+		t.Fatalf("stmt.Expression is not ast.Identifier, got=%T",  stmt.Expression)
+	}
+	
+	if ident.Value != "foobar" {
+		t.Errorf("ident.Value not '%s', got=%s", "foobar", ident.Value)
+	}
+	
+	if ident.TokenLiteral() != "foobar" {
+		t.Errorf("ident.TokenLiteral() not '%s', got=%s", "foobar", ident.TokenLiteral())
 	}
 }

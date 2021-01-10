@@ -7,6 +7,17 @@ import (
 	"monkey/token"
 )
 
+const (
+	_ int = iota
+	LOWEST
+	EQUALS		// ==
+	LESSGREATER	// < or >
+	SUM			// +
+	PRODUCT		// *
+	PREFIX		// - or !
+	CALL		// func(args)
+)
+
 type Parser struct {
 	lexer *lexer.Lexer
 
@@ -21,6 +32,12 @@ type Parser struct {
 
 func NewParser(l *lexer.Lexer) *Parser {
 	p := &Parser{lexer: l, errors: []string{}}
+
+	// init prefix parse functions map
+	p.PrefixParseFns = make(map[token.TokenType] PrefixParseFn)
+
+	// register prefix parsing functions
+	p.RegisterPrefixParseFn(token.IDENT, p.ParseIdentifier)
 
 	// set both CurrToken and PeekToken
 	p.NextToken()
@@ -61,6 +78,21 @@ func (p *Parser) AddError(t token.TokenType) {
 	p.errors = append(p.errors, msg)
 }
 
+func (p *Parser) ParseProgram() *ast.Program {
+	program := &ast.Program{}
+	program.Statements = []ast.Statement{}
+	
+	for p.CurrToken.Type != token.EOF {
+		stmt := p.ParseStatement()
+		if stmt != nil {
+			program.Statements = append(program.Statements, stmt)
+		}
+		p.NextToken()
+	}
+	
+	return program
+}
+
 func (p *Parser) ParseStatement() ast.Statement {
 	switch p.CurrToken.Type {
 	case token.LET:
@@ -68,7 +100,7 @@ func (p *Parser) ParseStatement() ast.Statement {
 	case token.RETURN:
 		return p.ParseReturnStatement()
 	default:
-		return nil
+		return p.ParseExpressionStatement()
 	}
 }
 
@@ -89,13 +121,15 @@ func (p *Parser) ParseLetStatement() *ast.LetStatement {
 		p.NextToken()
 	}
 
+	p.NextToken() // we shouldn't need this
+
 	return stmt
 }
 
 func (p *Parser) ParseReturnStatement() *ast.ReturnStatement {
 	stmt := &ast.ReturnStatement{Token: p.CurrToken}
 
-	// p.NextToken()
+	p.NextToken()
 
 	if !p.CurrTokenIs(token.SEMICOLON) {
 		p.NextToken()
@@ -104,19 +138,32 @@ func (p *Parser) ParseReturnStatement() *ast.ReturnStatement {
 	return stmt
 }
 
-func (p *Parser) ParseProgram() *ast.Program {
-	program := &ast.Program{}
-	program.Statements = []ast.Statement{}
-	
-	for p.CurrToken.Type != token.EOF {
-		stmt := p.ParseStatement()
-		if stmt != nil {
-			program.Statements = append(program.Statements, stmt)
-		}
+func (p *Parser) ParseExpressionStatement() *ast.ExpressionStatement {
+	stmt := &ast.ExpressionStatement{Token: p.CurrToken}
+
+	stmt.Expression = p.ParseExpression(LOWEST)
+
+	if p.PeekTokenIs(token.SEMICOLON) {
 		p.NextToken()
 	}
-	
-	return program
+
+	return stmt
+}
+
+func (p *Parser) ParseExpression(precedence int) ast.Expression {
+	prefix := p.PrefixParseFns[p.CurrToken.Type]
+
+	if prefix == nil {
+		return nil
+	}
+
+	LeftExpression := prefix()
+
+	return LeftExpression
+}
+
+func (p *Parser) ParseIdentifier() ast.Expression {
+	return &ast.Identifier{Token: p.CurrToken, Value: p.CurrToken.Literal}
 }
 
 type (
