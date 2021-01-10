@@ -40,6 +40,8 @@ func NewParser(l *lexer.Lexer) *Parser {
 	// register prefix parsing functions
 	p.RegisterPrefixParseFn(token.IDENT, p.ParseIdentifier)
 	p.RegisterPrefixParseFn(token.INT, p.ParseIntegerLiteral)
+	p.RegisterPrefixParseFn(token.BANG, p.ParsePrefixExpression)
+	p.RegisterPrefixParseFn(token.MINUS, p.ParsePrefixExpression)
 
 	// set both CurrToken and PeekToken
 	p.NextToken()
@@ -66,7 +68,7 @@ func (p *Parser) ExpectedPeek(t token.TokenType) bool {
 		p.NextToken()
 		return true
 	} else {
-		p.AddError(t)
+		p.ExpectedPeekError(t)
 		return false
 	}
 }
@@ -75,8 +77,13 @@ func (p *Parser) GetErrors() []string {
 	return p.errors
 }
 
-func (p *Parser) AddError(t token.TokenType) {
+func (p *Parser) ExpectedPeekError(t token.TokenType) {
 	msg := fmt.Sprintf("expected next token to be %s, got %s insted", t, p.PeekToken.Type)
+	p.errors = append(p.errors, msg)
+}
+
+func (p *Parser) NoPrefixParseFnError(t token.TokenType) {
+	msg := fmt.Sprintf("no prefix parse function for %s found", t)
 	p.errors = append(p.errors, msg)
 }
 
@@ -156,6 +163,7 @@ func (p *Parser) ParseExpression(precedence int) ast.Expression {
 	prefix := p.PrefixParseFns[p.CurrToken.Type]
 
 	if prefix == nil {
+		p.NoPrefixParseFnError(p.CurrToken.Type)
 		return nil
 	}
 
@@ -181,6 +189,16 @@ func (p *Parser) ParseIntegerLiteral() ast.Expression {
 	literal.Value = value
 
 	return literal
+}
+
+func (p *Parser) ParsePrefixExpression() ast.Expression {
+	expression := &ast.PrefixExpression{Token: p.CurrToken, Operator: p.CurrToken.Literal}
+
+	p.NextToken()
+
+	expression.Operand = p.ParseExpression(PREFIX)
+
+	return expression
 }
 
 type (
