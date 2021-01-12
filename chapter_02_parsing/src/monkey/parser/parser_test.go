@@ -257,6 +257,71 @@ func CheckIntegerLiteral(t *testing.T, il ast.Expression, value int64) bool {
 	return true
 }
 
+func CheckIdentifier(t *testing.T, expression ast.Expression, value string) bool {
+	ident, okay := expression.(*ast.Identifier)
+
+	if !okay {
+		t.Errorf("expression not *ast.Identifier, got=%T", expression)
+		return false
+	}
+
+	if ident.Value != value {
+		t.Errorf("ident.Value not %s, got=%s", value, ident.Value)
+		return false
+	}
+
+	if ident.TokenLiteral() != value {
+		t.Errorf("ident.TokenLiteral() not %s, got=%s", value, ident.TokenLiteral())
+		return false
+	}
+
+	return true
+}
+
+func CheckLiteralExpression(t *testing.T, expression ast.Expression, expected interface{}) bool {
+	switch value := expected.(type) {
+	case int:
+		return CheckIntegerLiteral(t, expression, int64(value))
+	case int64:
+		return CheckIntegerLiteral(t, expression, value)
+	case string:
+		return CheckIdentifier(t, expression, value)
+	}
+
+	t.Errorf("type of expression not handled, got=%T", expression)
+	return false
+}
+
+func CheckInfixExpression(
+	t *testing.T,
+	expression ast.Expression,
+	OperandLeft interface{},
+	operator string,
+	OperandRight interface{},
+) bool {
+	operation, okay := expression.(*ast.InfixExpression)
+
+	if !okay {
+		t.Errorf("expression not *ast.InfixExpression, got=%T", expression)
+		return false
+	}
+
+	if !CheckLiteralExpression(t, operation.OperandLeft, OperandLeft) {
+		return false
+	}
+
+	if operation.Operator != operator {
+		t.Errorf("expression.Operator not %s, got=%s", operator, operation.Operator)
+		return false
+	}
+
+	if !CheckLiteralExpression(t, operation.OperandRight, OperandRight) {
+		return false
+	}
+
+	return true
+}
+
 func TestInfixExpression(t *testing.T) {
 	tests := []struct {
 		input string
@@ -291,21 +356,7 @@ func TestInfixExpression(t *testing.T) {
 			t.Fatalf("program.Statements[0] is not ast.ExpressionStatement, got=%T", program.Statements[0])
 		}
 
-		expression, okay := stmt.Expression.(*ast.InfixExpression)
-	
-		if !okay {
-			t.Fatalf("stmt is not ast.InfixExpression, got=%T",  stmt.Expression)
-		}
-		
-		if !CheckIntegerLiteral(t, expression.OperandLeft, tt.OperandLeft) {
-			return
-		}
-		
-		if expression.Operator != tt.operator {
-			t.Fatalf("expression.Operator is not '%s', got=%s", tt.operator, expression.Operator)
-		}
-		
-		if !CheckIntegerLiteral(t, expression.OperandRight, tt.OperandRight) {
+		if !CheckInfixExpression(t, stmt.Expression, tt.OperandLeft, tt.operator, tt.OperandRight) {
 			return
 		}
 	}
