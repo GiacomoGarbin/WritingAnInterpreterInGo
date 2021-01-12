@@ -30,6 +30,19 @@ var precedences = map[token.TokenType] int {
 	token.ASTERISK:	PRODUCT,
 }
 
+type (
+	PrefixParseFn func() ast.Expression
+	InfixParseFn func(ast.Expression) ast.Expression
+)
+
+func (p *Parser) RegisterPrefixParseFn(TokenType token.TokenType, fn PrefixParseFn) {
+	p.PrefixParseFns[TokenType] = fn
+}
+
+func (p *Parser) RegisterInfixParseFn(TokenType token.TokenType, fn InfixParseFn) {
+	p.InfixParseFns[TokenType] = fn
+}
+
 type Parser struct {
 	lexer *lexer.Lexer
 
@@ -52,6 +65,8 @@ func NewParser(l *lexer.Lexer) *Parser {
 	p.RegisterPrefixParseFn(token.INT, p.ParseIntegerLiteral)
 	p.RegisterPrefixParseFn(token.BANG, p.ParsePrefixExpression)
 	p.RegisterPrefixParseFn(token.MINUS, p.ParsePrefixExpression)
+	p.RegisterPrefixParseFn(token.TRUE, p.ParseBoolean)
+	p.RegisterPrefixParseFn(token.FALSE, p.ParseBoolean)
 	
 	// init infix parse functions map
 	p.InfixParseFns = make(map[token.TokenType] InfixParseFn)
@@ -263,15 +278,6 @@ func (p *Parser) ParseInfixExpression(operand ast.Expression) ast.Expression {
 	return expression
 }
 
-type (
-	PrefixParseFn func() ast.Expression
-	InfixParseFn func(ast.Expression) ast.Expression
-)
-
-func (p *Parser) RegisterPrefixParseFn(TokenType token.TokenType, fn PrefixParseFn) {
-	p.PrefixParseFns[TokenType] = fn
-}
-
-func (p *Parser) RegisterInfixParseFn(TokenType token.TokenType, fn InfixParseFn) {
-	p.InfixParseFns[TokenType] = fn
+func (p *Parser) ParseBoolean() ast.Expression {
+	return &ast.Boolean{Token: p.CurrToken, Value: p.CurrTokenIs(token.TRUE)}
 }
