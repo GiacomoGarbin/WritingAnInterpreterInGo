@@ -67,6 +67,7 @@ func NewParser(l *lexer.Lexer) *Parser {
 	p.RegisterPrefixParseFn(token.MINUS, p.ParsePrefixExpression)
 	p.RegisterPrefixParseFn(token.TRUE, p.ParseBoolean)
 	p.RegisterPrefixParseFn(token.FALSE, p.ParseBoolean)
+	p.RegisterPrefixParseFn(token.LPAREN, p.ParseGroupedExpression)
 	
 	// init infix parse functions map
 	p.InfixParseFns = make(map[token.TokenType] InfixParseFn)
@@ -280,4 +281,16 @@ func (p *Parser) ParseInfixExpression(operand ast.Expression) ast.Expression {
 
 func (p *Parser) ParseBoolean() ast.Expression {
 	return &ast.Boolean{Token: p.CurrToken, Value: p.CurrTokenIs(token.TRUE)}
+}
+
+func (p *Parser) ParseGroupedExpression() ast.Expression {
+	p.NextToken()
+
+	expression := p.ParseExpression(LOWEST)
+
+	if !p.ExpectedPeek(token.RPAREN) {
+		return nil
+	}
+
+	return expression
 }
