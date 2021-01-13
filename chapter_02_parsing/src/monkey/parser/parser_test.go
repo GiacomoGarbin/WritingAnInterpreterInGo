@@ -463,3 +463,100 @@ func TestBooleanExpression(t *testing.T) {
 		}
 	}
 }
+
+func TestIfExpression(t *testing.T) {
+	input := "if (x < y) { x }"
+
+	l := lexer.NewLexer(input)
+	p := NewParser(l)
+	program := p.ParseProgram()
+	CheckParseErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program has not enough statements, got=%d", len(program.Statements))
+	}
+
+	stmt, okay := program.Statements[0].(*ast.ExpressionStatement)
+	if !okay {
+		t.Fatalf("program.Statements[0] is not ast.ExpressionStatement, got=%T", program.Statements[0])
+	}
+
+	expression, okay := stmt.Expression.(*ast.IfExpression)
+	if !okay {
+		t.Fatalf("expression not *ast.IfExpression, got=%T", stmt.Expression)
+	}
+
+	if !CheckInfixExpression(t, expression.Condition, "x", "<", "y") {
+		return
+	}
+
+	if len(expression.Consequence.Statements) != 1 {
+		t.Errorf("consequence has more than 1 statement, got=%d", len(expression.Consequence.Statements))
+	}
+
+	consequence, okay := expression.Consequence.Statements[0].(*ast.ExpressionStatement)
+	if !okay {
+		t.Fatalf("consequence is not ast.ExpressionStatement, got=%T", expression.Consequence.Statements[0])
+	}
+
+	if !CheckIdentifier(t, consequence.Expression, "x") {
+		return
+	}
+
+	if expression.Alternative != nil {
+		t.Errorf("alternative not nil, got=%+v", expression.Alternative)
+	}
+}
+
+func TestIfElseExpression(t *testing.T) {
+	input := "if (x < y) { x } else { y }"
+
+	l := lexer.NewLexer(input)
+	p := NewParser(l)
+	program := p.ParseProgram()
+	CheckParseErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program has not enough statements, got=%d", len(program.Statements))
+	}
+
+	stmt, okay := program.Statements[0].(*ast.ExpressionStatement)
+	if !okay {
+		t.Fatalf("program.Statements[0] is not ast.ExpressionStatement, got=%T", program.Statements[0])
+	}
+
+	expression, okay := stmt.Expression.(*ast.IfExpression)
+	if !okay {
+		t.Fatalf("expression not *ast.IfExpression, got=%T", stmt.Expression)
+	}
+
+	if !CheckInfixExpression(t, expression.Condition, "x", "<", "y") {
+		return
+	}
+
+	if len(expression.Consequence.Statements) != 1 {
+		t.Errorf("consequence has more than 1 statement, got=%d", len(expression.Consequence.Statements))
+	}
+
+	consequence, okay := expression.Consequence.Statements[0].(*ast.ExpressionStatement)
+	if !okay {
+		t.Fatalf("consequence is not ast.ExpressionStatement, got=%T", expression.Consequence.Statements[0])
+	}
+
+	if !CheckIdentifier(t, consequence.Expression, "x") {
+		return
+	}
+
+	if len(expression.Alternative.Statements) != 1 {
+		t.Errorf("alternative has more than 1 statement, got=%d", len(expression.Alternative.Statements))
+	}
+
+	alternative, okay := expression.Alternative.Statements[0].(*ast.ExpressionStatement)
+	if !okay {
+		t.Fatalf("alternative is not ast.ExpressionStatement, got=%T", expression.Alternative.Statements[0])
+	}
+
+	if !CheckIdentifier(t, alternative.Expression, "y") {
+		return
+	}
+}

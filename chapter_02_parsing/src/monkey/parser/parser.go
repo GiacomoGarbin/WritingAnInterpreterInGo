@@ -68,6 +68,7 @@ func NewParser(l *lexer.Lexer) *Parser {
 	p.RegisterPrefixParseFn(token.TRUE, p.ParseBoolean)
 	p.RegisterPrefixParseFn(token.FALSE, p.ParseBoolean)
 	p.RegisterPrefixParseFn(token.LPAREN, p.ParseGroupedExpression)
+	p.RegisterPrefixParseFn(token.IF, p.ParseIfExpression)
 	
 	// init infix parse functions map
 	p.InfixParseFns = make(map[token.TokenType] InfixParseFn)
@@ -293,4 +294,57 @@ func (p *Parser) ParseGroupedExpression() ast.Expression {
 	}
 
 	return expression
+}
+
+func (p *Parser) ParseIfExpression() ast.Expression {
+	expression := &ast.IfExpression{ Token: p.CurrToken }
+
+	if !p.ExpectedPeek(token.LPAREN) {
+		return nil
+	}
+
+	p.NextToken()
+	expression.Condition = p.ParseExpression(LOWEST)
+
+	if !p.ExpectedPeek(token.RPAREN) {
+		return nil
+	}
+
+	if !p.ExpectedPeek(token.LBRACE) {
+		return nil
+	}
+
+	expression.Consequence = p.ParseBlockStatement()
+
+	if p.PeekTokenIs(token.ELSE) {
+		p.NextToken()
+
+		if !p.ExpectedPeek(token.LBRACE) {
+			return nil
+		}
+
+		expression.Alternative = p.ParseBlockStatement()
+	}
+
+	return expression
+}
+
+func (p *Parser) ParseBlockStatement() *ast.BlockStatement {
+	block := &ast.BlockStatement{
+		Token: p.CurrToken,
+		Statements: []ast.Statement{},
+	}
+
+	p.NextToken()
+
+	for !p.CurrTokenIs(token.RBRACE) && !p.CurrTokenIs(token.EOF) {
+		stmt := p.ParseStatement()
+
+		if stmt != nil {
+			block.Statements = append(block.Statements, stmt)
+		}
+		p.NextToken()
+	}
+
+	return block
 }
