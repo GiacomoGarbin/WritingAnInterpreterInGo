@@ -28,6 +28,7 @@ var precedences = map[token.TokenType] int {
 	token.MINUS:	SUM,
 	token.SLASH:	PRODUCT,
 	token.ASTERISK:	PRODUCT,
+	token.LPAREN:	CALL,
 }
 
 type (
@@ -82,6 +83,7 @@ func NewParser(l *lexer.Lexer) *Parser {
 	p.RegisterInfixParseFn(token.NOT_EQ, p.ParseInfixExpression)
 	p.RegisterInfixParseFn(token.LT, p.ParseInfixExpression)
 	p.RegisterInfixParseFn(token.GT, p.ParseInfixExpression)
+	p.RegisterInfixParseFn(token.LPAREN, p.ParseCallExpression)
 
 	// set both CurrToken and PeekToken
 	p.NextToken()
@@ -393,4 +395,35 @@ func (p *Parser) ParseFunctionParameters() []*ast.Identifier {
 	}
 
 	return identifiers
+}
+
+func (p *Parser) ParseCallExpression(function ast.Expression) ast.Expression {
+	expression := &ast.CallExpression{Token: p.CurrToken, Function: function}
+	expression.Arguments = p.ParseCallArguments()
+
+	return expression
+}
+
+func (p *Parser) ParseCallArguments() []ast.Expression {
+	args := []ast.Expression{}
+
+	p.NextToken()
+
+	if p.CurrTokenIs(token.RPAREN) {
+		return args
+	}
+
+	args = append(args, p.ParseExpression(LOWEST))
+
+	for p.PeekTokenIs(token.COMMA) {
+		p.NextToken() // skip arg
+		p.NextToken() // skip ,
+		args = append(args, p.ParseExpression(LOWEST))
+	}
+
+	if !p.ExpectedPeek(token.RPAREN) {
+		return nil
+	}
+
+	return args
 }
