@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func LetStatementTest(t *testing.T, s ast.Statement, name string) bool {
+func CheckLetStatement(t *testing.T, s ast.Statement, name string) bool {
 	if s.TokenLiteral() != "let" {
 		t.Errorf("s.TokenLiteral() not 'let', got=%q", s.TokenLiteral())
 		return false
@@ -49,44 +49,33 @@ func CheckParseErrors(t *testing.T, p *Parser) {
 }
 
 func TestLetStatement(t *testing.T) {
-	input := `let x = 5;
-	let y = 10;
-	let foobar = 838383;`
-
-	// failing test input
-	// input := `let x 5;
-	// let = 10;
-	// let 838383;`
-
-	l := lexer.NewLexer(input)
-	p := NewParser(l)
-
-	program := p.ParseProgram()
-	CheckParseErrors(t, p)
-
-	// for i, stmt := range program.Statements {
-	// 	t.Errorf("program.Statements[%d] = %T (%s, %s)", i, stmt, stmt.TokenLiteral(), stmt.String())
-	// }
-
-	if program == nil {
-		t.Fatalf("ParseProgram() returned nil")
-	}
-
-	if len(program.Statements) != 3 {
-		t.Fatalf("program.Statements does not contain 3 statements, got=%d", len(program.Statements))
-	}
-
 	tests := []struct {
+		input string
 		ExpectedIdentifier string
+		ExpectedValue interface{}
 	} {
-		{"x"},
-		{"y"},
-		{"foobar"},
+		{ "let x = 5;", "x", 5 },
+		{ "let y = true;", "y", true },
+		{ "let foobar = y;", "foobar", "y" },
 	}
 
-	for i, tt := range tests {
-		stmt := program.Statements[i]
-		if !LetStatementTest(t, stmt, tt.ExpectedIdentifier) {
+	for _, tt := range tests {
+		l := lexer.NewLexer(tt.input)
+		p := NewParser(l)
+		program := p.ParseProgram()
+		CheckParseErrors(t, p)
+
+		if len(program.Statements) != 1 {
+			t.Fatalf("program.Statements does not contain 1 statements, got=%d", len(program.Statements))
+		}
+	
+		stmt := program.Statements[0]
+		if !CheckLetStatement(t, stmt, tt.ExpectedIdentifier) {
+			return
+		}
+
+		value := stmt.(*ast.LetStatement).Value
+		if !CheckLiteralExpression(t, value, tt.ExpectedValue) {
 			return
 		}
 	}

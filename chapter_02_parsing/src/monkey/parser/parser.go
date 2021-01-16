@@ -182,11 +182,13 @@ func (p *Parser) ParseLetStatement() *ast.LetStatement {
 		return nil
 	}
 
-	if !p.CurrTokenIs(token.SEMICOLON) {
+	p.NextToken() // skip =
+
+	stmt.Value = p.ParseExpression(LOWEST)
+
+	if p.PeekTokenIs(token.SEMICOLON) {
 		p.NextToken()
 	}
-
-	p.NextToken() // we shouldn't need this
 
 	return stmt
 }
@@ -194,9 +196,11 @@ func (p *Parser) ParseLetStatement() *ast.LetStatement {
 func (p *Parser) ParseReturnStatement() *ast.ReturnStatement {
 	stmt := &ast.ReturnStatement{Token: p.CurrToken}
 
-	p.NextToken()
+	p.NextToken() // skip return
 
-	if !p.CurrTokenIs(token.SEMICOLON) {
+	stmt.Value = p.ParseExpression(LOWEST)
+
+	if p.PeekTokenIs(token.SEMICOLON) {
 		p.NextToken()
 	}
 
