@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"monkey/evaluator"
 	"monkey/lexer"
 	"monkey/parser"
 )
@@ -17,7 +18,7 @@ func StartConsole(in io.Reader, out io.Writer) {
 		fmt.Fprintf(out, PROMPT)
 		scanned := scanner.Scan()
 
-		if (!scanned) {
+		if !scanned {
 			return
 		}
 
@@ -32,7 +33,11 @@ func StartConsole(in io.Reader, out io.Writer) {
 			continue
 		}
 
-		io.WriteString(out, program.String() + "\n")
+		evaluated := evaluator.Eval(program)
+
+		if evaluated != nil {
+			io.WriteString(out, evaluated.Inspect() + "\n")
+		}
 	}
 }
 
