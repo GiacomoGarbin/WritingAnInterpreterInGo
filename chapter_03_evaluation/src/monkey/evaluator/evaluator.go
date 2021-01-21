@@ -22,6 +22,10 @@ func Eval(node ast.Node) object.Object {
 	case *ast.PrefixExpression:
 		operand := Eval(node.Operand)
 		return EvalPrefixExpression(node.Operator, operand)
+	case *ast.InfixExpression:
+		OperandLeft  := Eval(node.OperandLeft)
+		OperandRight := Eval(node.OperandRight)
+		return EvalInfixExpression(node.Operator, OperandLeft, OperandRight)
 
 	// expressions
 	case *ast.IntegerLiteral:
@@ -82,4 +86,43 @@ func EvalMinusOperatorExpression(operand object.Object) object.Object {
 
 	value := operand.(*object.Integer).Value
 	return &object.Integer{Value: -value}
+}
+
+func EvalInfixExpression(operator string, OperandLeft object.Object, OperandRight object.Object) object.Object {
+	switch {
+	case OperandLeft.Type() == object.INTEGER_OBJ && OperandRight.Type() == object.INTEGER_OBJ:
+		return EvalIntegerInfixExpression(operator, OperandLeft, OperandRight)
+	case operator == "==":
+		return BoolToBoolean(OperandLeft == OperandRight)
+	case operator == "!=":
+		return BoolToBoolean(OperandLeft != OperandRight)
+	default:
+		return NULL
+	}
+}
+
+func EvalIntegerInfixExpression(operator string, OperandLeft object.Object, OperandRight object.Object) object.Object {
+	ValueLeft  := OperandLeft.(*object.Integer).Value
+	ValueRight := OperandRight.(*object.Integer).Value
+
+	switch operator {
+	case "+":
+		return &object.Integer{Value: ValueLeft + ValueRight}
+	case "-":
+		return &object.Integer{Value: ValueLeft - ValueRight}
+	case "*":
+		return &object.Integer{Value: ValueLeft * ValueRight}
+	case "/":
+		return &object.Integer{Value: ValueLeft / ValueRight}
+	case "<":
+		return BoolToBoolean(ValueLeft < ValueRight)
+	case ">":
+		return BoolToBoolean(ValueLeft > ValueRight)
+	case "==":
+		return BoolToBoolean(ValueLeft == ValueRight)
+	case "!=":
+		return BoolToBoolean(ValueLeft != ValueRight)
+	default:
+		return NULL
+	}
 }
