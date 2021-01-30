@@ -67,6 +67,19 @@ func (lexer *Lexer) SkipWhiteSpace() {
 	}
 }
 
+func (lexer *Lexer) ReadString() string {
+	pos := lexer.position + 1
+
+	for {
+		lexer.ReadChar()
+		if lexer.char == '"' || lexer.char == 0 {
+			break
+		}
+	}
+
+	return lexer.input[pos:lexer.position]
+}
+
 func (lexer *Lexer) NextToken() token.Token {
 	var t token.Token
 
@@ -116,6 +129,9 @@ func (lexer *Lexer) NextToken() token.Token {
 	case 0:
 		t.Type = token.EOF
 		t.Literal = ""
+	case '"':
+		t.Type = token.STRING
+		t.Literal = lexer.ReadString()
 	default:
 		if IsLetter(lexer.char) {
 			t.Literal = lexer.ReadIdentifier()

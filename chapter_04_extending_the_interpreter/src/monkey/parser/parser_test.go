@@ -677,6 +677,7 @@ func TestCallExpression(t *testing.T) {
 	CheckInfixExpression(t, expression.Arguments[1], 2, "*", 3)
 	CheckInfixExpression(t, expression.Arguments[2], 4, "+", 5)
 }
+
 func TestCallExpressionArguments(t *testing.T) {
 	tests := []struct {
 		input         string
@@ -726,5 +727,32 @@ func TestCallExpressionArguments(t *testing.T) {
 				t.Errorf("argument %d wrong, want=%q, got=%q", i, arg, expression.Arguments[i].String())
 			}
 		}
+	}
+}
+
+func TestStringLiteralExpression(t *testing.T) {
+	input := "\"hello world\";"
+
+	l := lexer.NewLexer(input)
+	p := NewParser(l)
+	program := p.ParseProgram()
+	CheckParseErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program has not 1 statements, got=%d", len(program.Statements))
+	}
+
+	stmt, okay := program.Statements[0].(*ast.ExpressionStatement)
+	if !okay {
+		t.Fatalf("program.Statements[0] is not ast.ExpressionStatement, got=%T", program.Statements[0])
+	}
+
+	literal, okay := stmt.Expression.(*ast.StringLiteral)
+	if !okay {
+		t.Fatalf("stmt.expression not *ast.StringLiteral, got=%T", stmt.Expression)
+	}
+
+	if literal.Value != "hello world" {
+		t.Errorf("literal.Value not \"hello world\", got=%q", literal.Value)
 	}
 }
