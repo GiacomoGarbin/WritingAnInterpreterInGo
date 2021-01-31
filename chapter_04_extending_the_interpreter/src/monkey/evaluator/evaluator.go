@@ -260,13 +260,16 @@ func NewError(format string, a ... interface{}) *object.Error {
 }
 
 func EvalIdentifier(i *ast.Identifier, env *object.Environment) object.Object {
-	value, okay := env.Get(i.Value)
 	
-	if !okay {
-		return NewError("identifier not found: " + i.Value)
+	if value, okay := env.Get(i.Value); okay {
+		return value
 	}
 
-	return value
+	if builtin, okay := builtins[i.Value]; okay {
+		return builtin
+	}
+
+	return NewError("identifier not found: " + i.Value)
 }
 
 func EvalExpressions(expressions []ast.Expression, env *object.Environment) []object.Object {
@@ -284,16 +287,16 @@ func EvalExpressions(expressions []ast.Expression, env *object.Environment) []ob
 }
 
 func CallFunction(fn object.Object, args []object.Object) object.Object {
-	function, okay := fn.(*object.Function)
-
-	if !okay {
+	switch function := fn.(type) {
+	case *object.Function:
+		ExtendedEnv := ExtendFunctionEnv(function, args)
+		evaluated := Eval(function.Body, ExtendedEnv)
+		return UnwrapReturnValue(evaluated)
+	case *object.Builtin:
+		return function.Func(args...)
+	default:
 		return NewError("not a function: %s", fn.Type())
 	}
-
-	ExtendedEnv := ExtendFunctionEnv(function, args)
-	evaluated := Eval(function.Body, ExtendedEnv)
-
-	return UnwrapReturnValue(evaluated)
 }
 
 func ExtendFunctionEnv(fn *object.Function, args []object.Object) *object.Environment {
