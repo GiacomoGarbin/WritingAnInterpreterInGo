@@ -17,6 +17,7 @@ const (
 	PRODUCT		// *
 	PREFIX		// - or !
 	CALL		// func(args)
+	INDEX		// array[index]
 )
 
 var precedences = map[token.TokenType] int {
@@ -29,6 +30,7 @@ var precedences = map[token.TokenType] int {
 	token.SLASH:	PRODUCT,
 	token.ASTERISK:	PRODUCT,
 	token.LPAREN:	CALL,
+	token.LBRACKET:	INDEX,
 }
 
 type (
@@ -72,6 +74,7 @@ func NewParser(l *lexer.Lexer) *Parser {
 	p.RegisterPrefixParseFn(token.IF, p.ParseIfExpression)
 	p.RegisterPrefixParseFn(token.FUNCTION, p.ParseFunctionLiteral)
 	p.RegisterPrefixParseFn(token.STRING, p.ParseStringLiteral)
+	p.RegisterPrefixParseFn(token.LBRACKET, p.ParseArrayLiteral)
 	
 	// init infix parse functions map
 	p.InfixParseFns = make(map[token.TokenType] InfixParseFn)
@@ -85,6 +88,7 @@ func NewParser(l *lexer.Lexer) *Parser {
 	p.RegisterInfixParseFn(token.LT, p.ParseInfixExpression)
 	p.RegisterInfixParseFn(token.GT, p.ParseInfixExpression)
 	p.RegisterInfixParseFn(token.LPAREN, p.ParseCallExpression)
+	p.RegisterInfixParseFn(token.LBRACKET, p.ParseIndexExpression)
 
 	// set both CurrToken and PeekToken
 	p.NextToken()
@@ -404,35 +408,56 @@ func (p *Parser) ParseFunctionParameters() []*ast.Identifier {
 
 func (p *Parser) ParseCallExpression(function ast.Expression) ast.Expression {
 	expression := &ast.CallExpression{Token: p.CurrToken, Function: function}
-	expression.Arguments = p.ParseCallArguments()
+	expression.Arguments = p.ParseExpressionList(token.RPAREN)
 
 	return expression
 }
 
-func (p *Parser) ParseCallArguments() []ast.Expression {
-	args := []ast.Expression{}
+func (p *Parser) ParseStringLiteral() ast.Expression {
+	return &ast.StringLiteral{Token: p.CurrToken, Value: p.CurrToken.Literal }
+}
+
+func (p *Parser) ParseArrayLiteral() ast.Expression {
+	array := &ast.ArrayLiteral{Token: p.CurrToken}
+
+	array.Elements = p.ParseExpressionList(token.RBRACKET)
+
+	return array
+}
+
+func (p *Parser) ParseExpressionList(EndToken token.TokenType) []ast.Expression {
+	list := []ast.Expression{}
+
+	if p.PeekTokenIs(EndToken) {
+		p.NextToken()
+		return list
+	}
 
 	p.NextToken()
-
-	if p.CurrTokenIs(token.RPAREN) {
-		return args
-	}
-
-	args = append(args, p.ParseExpression(LOWEST))
+	list = append(list, p.ParseExpression(LOWEST))
 
 	for p.PeekTokenIs(token.COMMA) {
-		p.NextToken() // skip arg
+		p.NextToken() // skip element
 		p.NextToken() // skip ,
-		args = append(args, p.ParseExpression(LOWEST))
+		list = append(list, p.ParseExpression(LOWEST))
 	}
 
-	if !p.ExpectedPeek(token.RPAREN) {
+	if !p.ExpectedPeek(EndToken) {
 		return nil
 	}
 
-	return args
+	return list
 }
 
-func (p *Parser) ParseStringLiteral() ast.Expression {
-	return &ast.StringLiteral{Token: p.CurrToken, Value: p.CurrToken.Literal }
+func (p *Parser) ParseIndexExpression(array ast.Expression) ast.Expression {
+	expression := &ast.IndexExpression{Token: p.CurrToken, Array: array}
+
+	p.NextToken()
+	expression.Index = p.ParseExpression(LOWEST)
+
+	if !p.ExpectedPeek(token.RBRACKET) {
+		return nil
+	}
+
+	return expression
 }

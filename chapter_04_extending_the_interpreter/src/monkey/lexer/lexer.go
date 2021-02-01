@@ -126,6 +126,10 @@ func (lexer *Lexer) NextToken() token.Token {
 		t = NewToken(token.LBRACE, lexer.char)
 	case '}':
 		t = NewToken(token.RBRACE, lexer.char)
+	case '[':
+		t = NewToken(token.LBRACKET, lexer.char)
+	case ']':
+		t = NewToken(token.RBRACKET, lexer.char)
 	case 0:
 		t.Type = token.EOF
 		t.Literal = ""

@@ -416,6 +416,14 @@ func TestOperatorPrecedence(t *testing.T) {
 			"add(a + b + c * d / f + g)",
 			"add((((a + b) + ((c * d) / f)) + g))",
 		},
+		{
+			"a * [1, 2, 3, 4][b * c] * d",
+			"((a * ([1, 2, 3, 4][(b * c)])) * d)",
+		},
+		{
+			"add(a * b[2], b[1], 2 * [1, 2][1])",
+			"add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))",
+		},
 	}
 
 	for _, tt := range tests {
@@ -754,5 +762,69 @@ func TestStringLiteralExpression(t *testing.T) {
 
 	if literal.Value != "hello world" {
 		t.Errorf("literal.Value not \"hello world\", got=%q", literal.Value)
+	}
+}
+
+func TestArrayLiteral(t *testing.T) {
+	input := "[1, 2 * 2, 3 + 3]"
+
+	l := lexer.NewLexer(input)
+	p := NewParser(l)
+	program := p.ParseProgram()
+	CheckParseErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program has not 1 statements, got=%d", len(program.Statements))
+	}
+
+	stmt, okay := program.Statements[0].(*ast.ExpressionStatement)
+	if !okay {
+		t.Fatalf("program.Statements[0] is not ast.ExpressionStatement, got=%T", program.Statements[0])
+	}
+
+	array, okay := stmt.Expression.(*ast.ArrayLiteral)
+	if !okay {
+		t.Fatalf("stmt.expression not *ast.StringLiteral, got=%T", stmt.Expression)
+	}
+
+	if len(array.Elements) != 3 {
+		t.Fatalf("len(array.Elements) not 3, got=%d", len(array.Elements))
+	}
+
+	CheckIntegerLiteral(t, array.Elements[0], 1)
+	CheckInfixExpression(t, array.Elements[1], 2, "*", 2)
+	CheckInfixExpression(t, array.Elements[2], 3, "+", 3)
+}
+
+func TestIndexExpression(t *testing.T) {
+	input := "MyArray[1 + 1]"
+
+	l := lexer.NewLexer(input)
+	p := NewParser(l)
+	program := p.ParseProgram()
+	CheckParseErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		// t.Fatalf("program has not 1 statements, got=%d", len(program.Statements))
+		// t.Fatalf("program.Statements[0] = %T", program.Statements[0])
+		// t.Fatalf("program.Statements[1] = %T", program.Statements[1])
+	}
+
+	stmt, okay := program.Statements[0].(*ast.ExpressionStatement)
+	if !okay {
+		t.Fatalf("program.Statements[0] is not ast.ExpressionStatement, got=%T", program.Statements[0])
+	}
+
+	expression, okay := stmt.Expression.(*ast.IndexExpression)
+	if !okay {
+		t.Fatalf("stmt.expression not *ast.IndexExpression, got=%T", stmt.Expression)
+	}
+
+	if !CheckIdentifier(t, expression.Array, "MyArray") {
+		return
+	}
+
+	if !CheckInfixExpression(t, expression.Index, 1, "+", 1) {
+		return
 	}
 }
