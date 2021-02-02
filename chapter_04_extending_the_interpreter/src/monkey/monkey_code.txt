@@ -1,0 +1,31 @@
+let map = fn(array, func) {
+	let iter = fn(array, cache) {
+		if (len(array) == 0) {
+			cache;
+		} else {
+			iter(rest(array), push(cache, func(first(array))));
+		}
+	};
+	iter(array, []);
+};
+
+let map = fn(array, func) { let iter = fn(array, cache) { if (len(array) == 0) { cache; } else { iter(rest(array), push(cache, func(first(array)))); } }; iter(array, []); };
+
+let reduce = fn(array, value, func) {
+	let iter = fn(array, value) {
+		if (len(array) == 0) {
+			value;
+		} else {
+			iter(rest(array), func(value, first(array)));
+		}
+	};
+	iter(array, value);
+};
+
+let reduce = fn(array, value, func) { let iter = fn(array, value) { if (len(array) == 0) { value; } else { iter(rest(array), func(value, first(array))); } }; iter(array, value); };
+
+let sum = fn(array) {
+	reduce(array, 0, fn(value, x) { value + x; })
+}
+
+let sum = fn(array) { reduce(array, 0, fn(value, x) { value + x; }) }
