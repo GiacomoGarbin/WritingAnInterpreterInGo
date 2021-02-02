@@ -90,6 +90,28 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	
 	case *ast.StringLiteral:
 		return &object.String{Value: node.Value}
+
+	case *ast.ArrayLiteral:
+		elements := EvalExpressions(node.Elements, env)
+
+		if len(elements) == 1 && IsError(elements[0]) {
+			return elements[0]
+		}
+
+		return &object.Array{Elements: elements}
+
+	case *ast.IndexExpression:
+		array := Eval(node.Array, env)
+		if IsError(array) {
+			return array
+		}
+		
+		index := Eval(node.Index, env)
+		if IsError(index) {
+			return index
+		}
+
+		return EvalIndexExpression(array, index)
 	}
 
 	return nil
@@ -314,4 +336,25 @@ func UnwrapReturnValue(obj object.Object) object.Object {
 		return ReturnValue.Value
 	}
 	return obj
+}
+
+func EvalIndexExpression(container, index object.Object) object.Object {
+	switch {
+	case container.Type() == object.ARRAY_OBJ && index.Type() == object.INTEGER_OBJ:
+		return EvalArrayIndexExpression(container, index)
+	default:
+		return NewError("index operator not supported: %s", container.Type())
+	}
+}
+
+func EvalArrayIndexExpression(container, index object.Object) object.Object {
+	array := container.(*object.Array)
+	i := index.(*object.Integer).Value
+	size := int64(len(array.Elements))
+
+	if i < 0 || i >= size {
+		return NULL
+	}
+
+	return array.Elements[i]
 }
