@@ -136,6 +136,8 @@ func (lexer *Lexer) NextToken() token.Token {
 	case '"':
 		t.Type = token.STRING
 		t.Literal = lexer.ReadString()
+	case ':':
+		t = NewToken(token.COLON, lexer.char)
 	default:
 		if IsLetter(lexer.char) {
 			t.Literal = lexer.ReadIdentifier()
