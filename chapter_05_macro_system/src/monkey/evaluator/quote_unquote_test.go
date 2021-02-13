@@ -24,6 +24,20 @@ func TestQuote(t *testing.T) {
             `quote(foobar + barfoo)`,
             `(foobar + barfoo)`,
         },
+        {
+            `let foobar = 8;
+            quote(foobar)`,
+            `foobar`,
+        },
+        {
+            `quote(unquote(quote(4 + 4)))`,
+            `(4 + 4)`,
+        },
+        {
+            `let quotedInfixExpression = quote(4 + 4);
+            quote(unquote(4 + 4) + unquote(quotedInfixExpression))`,
+            `(8 + (4 + 4))`,
+        },
 	}
 
 	for _, tt := range tests {
@@ -42,4 +56,58 @@ func TestQuote(t *testing.T) {
 			t.Errorf("not equal, got=%q, want=%q", quote.Node.String(), tt.expected)
 		}
 	}
+}
+
+func TestUnquote(t *testing.T) {
+    tests := []struct {
+        input    string
+        expected string
+    }{
+        {
+            `quote(unquote(4))`,
+            `4`,
+        },
+        {
+            `quote(unquote(4 + 4))`,
+            `8`,
+        },
+        {
+            `quote(8 + unquote(4 + 4))`,
+            `(8 + 8)`,
+        },
+        {
+            `quote(unquote(4 + 4) + 8)`,
+            `(8 + 8)`,
+        },
+        {
+            `let foobar = 8;
+            quote(unquote(foobar))`,
+            `8`,
+        },
+        {
+            `quote(unquote(true))`,
+            `true`,
+        },
+        {
+            `quote(unquote(true == false))`,
+            `false`,
+        },
+    }
+
+    for _, tt := range tests {
+		evaluated := CheckEval(tt.input)
+		
+        quote, okay := evaluated.(*object.Quote)
+        if !okay {
+            t.Fatalf("expected *object.Quote. got=%T (%+v)", evaluated, evaluated)
+        }
+
+        if quote.Node == nil {
+            t.Fatalf("quote.Node is nil")
+        }
+
+        if quote.Node.String() != tt.expected {
+            t.Errorf("not equal, got=%q, want=%q", quote.Node.String(), tt.expected)
+        }
+    }
 }
