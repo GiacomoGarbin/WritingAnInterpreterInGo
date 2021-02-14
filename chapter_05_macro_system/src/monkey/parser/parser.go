@@ -76,6 +76,7 @@ func NewParser(l *lexer.Lexer) *Parser {
 	p.RegisterPrefixParseFn(token.STRING, p.ParseStringLiteral)
 	p.RegisterPrefixParseFn(token.LBRACKET, p.ParseArrayLiteral)
 	p.RegisterPrefixParseFn(token.LBRACE, p.ParseHashLiteral)
+    p.RegisterPrefixParseFn(token.MACRO, p.ParseMacroLiteral)
 	
 	// init infix parse functions map
 	p.InfixParseFns = make(map[token.TokenType] InfixParseFn)
@@ -490,4 +491,22 @@ func (p *Parser) ParseHashLiteral() ast.Expression {
 	}
 
 	return hash
+}
+
+func (p *Parser) ParseMacroLiteral() ast.Expression {
+    macro := &ast.MacroLiteral{Token: p.CurrToken}
+
+    if !p.ExpectedPeek(token.LPAREN) {
+        return nil
+    }
+
+    macro.Parameters = p.ParseFunctionParameters()
+
+    if !p.ExpectedPeek(token.LBRACE) {
+        return nil
+    }
+
+    macro.Body = p.ParseBlockStatement()
+
+    return macro
 }

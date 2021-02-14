@@ -1013,3 +1013,44 @@ func TestHashLiteralsIntegerKey(t *testing.T) {
 		CheckIntegerLiteral(t, val, expected[integer.String()])
 	}
 }
+
+func TestMacroLiteral(t *testing.T) {
+    input := `macro(x, y) { x + y; }`
+
+	l := lexer.NewLexer(input)
+	p := NewParser(l)
+	program := p.ParseProgram()
+	CheckParseErrors(t, p)
+
+    if len(program.Statements) != 1 {
+        t.Fatalf("program.Statements does not contain %d statements, got=%d\n", 1, len(program.Statements))
+    }
+
+    stmt, okay := program.Statements[0].(*ast.ExpressionStatement)
+    if !okay {
+        t.Fatalf("statement is not ast.ExpressionStatement, got=%T", program.Statements[0])
+    }
+
+    macro, okay := stmt.Expression.(*ast.MacroLiteral)
+    if !okay {
+        t.Fatalf("stmt.Expression is not ast.MacroLiteral, got=%T", stmt.Expression)
+    }
+
+    if len(macro.Parameters) != 2 {
+        t.Fatalf("macro literal parameters wrong, want 2, got=%d\n", len(macro.Parameters))
+    }
+
+    CheckLiteralExpression(t, macro.Parameters[0], "x")
+    CheckLiteralExpression(t, macro.Parameters[1], "y")
+
+    if len(macro.Body.Statements) != 1 {
+        t.Fatalf("macro.Body.Statements has not 1 statement, got=%d\n", len(macro.Body.Statements))
+    }
+
+    body, okay := macro.Body.Statements[0].(*ast.ExpressionStatement)
+    if !okay {
+        t.Fatalf("macro body stmt is not ast.ExpressionStatement, got=%T", macro.Body.Statements[0])
+    }
+
+    CheckInfixExpression(t, body.Expression, "x", "+", "y")
+}
